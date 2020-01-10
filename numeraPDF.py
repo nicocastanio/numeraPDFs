@@ -38,20 +38,6 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 import glob
 
 
-def merge_pdfs(paths, output):
-    pdf_writer = PdfFileWriter()
-
-    for path in paths:
-        pdf_reader = PdfFileReader(path)
-        for page in range(pdf_reader.getNumPages()):
-            # Add each page to the writer object
-            pdf_writer.addPage(pdf_reader.getPage(page))
-
-    # Write out the merged PDF
-    with open(output, 'wb') as out:
-        pdf_writer.write(out)
-
-
 def createPagePdf(num, tmp, desde, hasta):
     c = canvas.Canvas(tmp)
     for i in range(desde+1,hasta+1):   #para que comience de 1
@@ -68,8 +54,8 @@ def createPagePdf(num, tmp, desde, hasta):
 def filebrowser(word, folder):
     """Returns a list with all files with the word/extension in it"""
     file = []
-    print('ext:', word) 
-    print('folder:', folder )
+    # print('ext:', word) 
+    # print('folder:', folder )
     for f in glob.glob1(folder, word):
         file.append(f)
     #for f in glob.glob("*"):
@@ -107,18 +93,20 @@ if __name__ == "__main__":
     # buscar archivos pdf en el directorio actual
     flist = filebrowser("*.pdf", path)
     print('Archivos a procesar: ',flist) 
+    newFile1 = destinationPath + 'salidav1.pdf'
+    output1 = PdfFileWriter()
     
     # recorrer la lista de Nombres de archivos 
     for file in flist: 
-        print('')
         print('--- Archivo: ', file) 
         base = file 
-        
+        filename = path+file
+
         # abrir Archivo (path completo) para lectura 
-        with open(path+file, 'rb') as f:
+        with open(filename, 'rb') as f:
             pdf = PdfFileReader(f,strict=False)
-            
             n = pdf.getNumPages() #cant de pag del pdf actual (original) 
+
             #if batch == 0:
             batch = -n
             output = PdfFileWriter()
@@ -130,35 +118,42 @@ if __name__ == "__main__":
             
             # abrir archivo temporal y moverlo 
             with open(tmp, 'rb') as ftmp:
-                numberPdf = PdfFileReader(ftmp)
+                numberedPdf = PdfFileReader(ftmp)
                 
                 for p in range(n):
-                    if not p%batch and p:
-                        newFile = file.replace(base, destinationPath+ base[:-4] + '_page_%d'%(p//batch) + base[-4:])
-                        print('Destino: ', newFile)
-                        with open(newFile, 'wb') as f:
-                            output.write(f)
-                        output = PdfFileWriter()
+                    #if not p%batch and p:
+                    #    newFile = file.replace(base, destinationPath+ base[:-4] + '_page_%d'%(p//batch) + base[-4:])
+                    #    print('Destino: ', newFile)
+                    #    with open(newFile, 'wb') as f:
+                    #        output.write(f)
+                    #    output = PdfFileWriter()
 
-                    print('page: %d of %d'%(p, n))
+                    #print('page: %d of %d'%(p, n))
                     
-                    page = pdf.getPage(p)
-                    numberLayer = numberPdf.getPage(p)
-
-                    page.mergePage(numberLayer)
-                    output.addPage(page)
+                    page = pdf.getPage(p) # pagina original 
+                    numberLayer = numberedPdf.getPage(p) # pagina numerada 
+                    page.mergePage(numberLayer) # merge de ambas paginas 
+                    output.addPage(page) # agrego a Salida 
+                    
+                    output1.addPage(page)
                   
                 #print('-nro pages: ',output.getNumPages())
                 #if output.getNumPages() == total:
                 if output.getNumPages():
-                    #newFile = 'pdfWithNumbers/'+ base
                     newFile = file.replace(base, destinationPath+ base[:-4] + '_page_%d'%(p//batch + 1)  + file[-4:])
-                    print('new path: ', newFile)
+
                     with open(newFile, 'wb') as f:
                         output.write(f)
+                    os.remove(newFile)
                 
             os.remove(tmp)
             totPages = totPages + n 
 
         # luego de procesar, eliminamos archivos originales
-        os.remove(file)
+        #os.remove(filename)
+
+    if output1.getNumPages():
+        print('- Salida: ', newFile1)
+        with open(newFile1, 'wb') as o:
+            output1.write(o)
+
