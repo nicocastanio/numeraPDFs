@@ -6,35 +6,33 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import glob
+from datetime import datetime
 
 
-def createPagePdf(num, tmp, desde, hasta):
+def createPagePdf(num, tmp, desde, hasta, username):
     c = canvas.Canvas(tmp)
+    now = datetime.now()
+    now_formated = now.strftime("%d/%m/%Y %H:%M:%S")
+    if len(username):
+        username = username.upper() + ' - '
     for i in range(desde+1,hasta+1):   #para que comience de 1
+        c.drawString((10)*mm, (4)*mm, username+now_formated)
         c.drawString((210//2)*mm, (4)*mm, str(i))
+        c.drawString((160)*mm, (4)*mm, "Impreso desde SAP")
         c.showPage()
     c.save()
     return
-    #with open(tmp, 'rb') as f:
-    #    pdf = PdfFileReader(f)
-    #    layer = pdf.getPage(0)
-    #return layer
 
 
 def filebrowser(word, folder):
     """Returns a list with all files with the word/extension in it"""
     file = []
-    # print('ext:', word) 
-    # print('folder:', folder )
     for f in glob.glob1(folder, word):
         file.append(f)
-    #for f in glob.glob("*"):
-        #if word in f:
-            #file.append(f)
     return file
 
 
-def main(folder): 
+def main(folder, username=''): 
     tmp = "__tmp.pdf"
     totPages = 0  # contador global de paginas 
     
@@ -63,7 +61,7 @@ def main(folder):
 
         desde = totPages
         hasta = n+totPages
-        createPagePdf(n,tmp,desde,hasta)   # crear pdf Numerado en tmp 
+        createPagePdf(n,tmp,desde,hasta, username)   # crear pdf Numerado en tmp 
 
         # abrir archivo temporal y agregar paginas a salida  
         numberedPdf = PdfFileReader(tmp)
@@ -92,10 +90,20 @@ if __name__ == "__main__":
     pass
     import sys,os
     path = 'C:\tmp\\'
+    username = ''
     if len(sys.argv) == 1:
+        print("C:> python numeraPDF.py [carpeta] [username]")
         if not os.path.isfile(path):
             sys.exit(1)
     else:
         path = sys.argv[1]
+        if len(sys.argv) == 3:
+            username = sys.argv[2]
 
-    main(path)
+    main(path,username)
+
+""" 
+TO-DO :
+- incorporar algunos parametros a la ejecución. ej: help, destino, print, etc 
+
+"""
