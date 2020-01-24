@@ -11,15 +11,19 @@ from datetime import datetime
 
 def createPagePdf(num, tmp, desde, hasta, username):
     c = canvas.Canvas(tmp)
+    # c.setFontSize()
+    c.setFont("Helvetica-Oblique",10)
+    
     now = datetime.now()
     now_formated = now.strftime("%d/%m/%Y %H:%M:%S")
     if len(username):
         username = username.upper() + ' - '
+
     for i in range(desde+1,hasta+1):   #para que comience de 1
-        c.drawString((10)*mm, (4)*mm, username+now_formated)
-        c.drawString((210//2)*mm, (4)*mm, str(i))
-        c.drawString((160)*mm, (4)*mm, "Impreso desde SAP")
+        c.drawString((10)*mm, (4)*mm, "Impreso desde SAP por "+username+now_formated)
+        c.drawString((165)*mm, (4)*mm, "Página: "+str(i))
         c.showPage()
+
     c.save()
     return
 
@@ -105,5 +109,5 @@ if __name__ == "__main__":
 """ 
 TO-DO :
 - incorporar algunos parametros a la ejecución. ej: help, destino, print, etc 
-
+- manejo de errores: ejemplo carpeta no existe. 
 """
