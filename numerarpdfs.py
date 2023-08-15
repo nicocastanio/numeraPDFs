@@ -4,12 +4,12 @@
 import reportlab
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
-from PyPDF2 import PdfFileWriter, PdfFileReader
+from pypdf import PdfWriter, PdfReader
 import glob
 from datetime import datetime
 
 
-def createPagePdf(num, tmp, desde, hasta, username):
+def createPagePdf(tmp, from_page, to_page, username):
     c = canvas.Canvas(tmp)
     # c.setFontSize()
     c.setFont("Helvetica-Oblique",10)
@@ -19,7 +19,7 @@ def createPagePdf(num, tmp, desde, hasta, username):
     if len(username):
         username = username.upper() + ' - '
 
-    for i in range(desde+1,hasta+1):   #para que comience de 1
+    for i in range(from_page+1,to_page+1):   #para que comience de 1
         c.drawString((10)*mm, (4)*mm, "Impreso desde SAP por "+username+now_formated)
         c.drawString((165)*mm, (4)*mm, "Página: "+str(i))
         c.showPage()
@@ -37,57 +37,53 @@ def filebrowser(word, folder):
 
 
 def main(folder, username=''): 
-    tmp = "__tmp.pdf"
+    tmpPdfFile = "__tmp.pdf"
     totPages = 0  # contador global de paginas 
     
     # verificar si existe el path destino, sino lo crea 
     destinationPath = path + 'pdfPaginado\\'
     if not os.path.isdir(destinationPath):
         os.mkdir(destinationPath)
-        print('Se creó carpeta: "pdfPaginado"')
+        print('New folder created: "pdfPaginado"')
 
-    # buscar archivos pdf en el directorio actual
+    # buscar archivos pdf en el directorio actual por orden alfabetico 
     flist = filebrowser("*.pdf", path)
-    print('Archivos a procesar: ',flist) 
+    print('Input files: ',flist) 
 
     # definir salida 
-    newFile1 = destinationPath + 'procesado.pdf'
-    output1 = PdfFileWriter()
+    newFilename = destinationPath + 'numerado.pdf'
+    mergedPdf = PdfWriter()
 
-    # recorrer la lista de Nombres de archivos 
+    # recorrer la lista de Nombres de archivos (orden alfabetico)
     for file in flist: 
-        print('--- Archivo: ', file) 
+        print('--- Processing file: ', file) 
         filename = path+file
 
         # abrir Archivo (path completo) para lectura 
-        pdf = PdfFileReader(filename) # ,strict=False)
-        n = pdf.getNumPages() # cant de pag del pdf actual (original) 
+        originalPdfFile = PdfReader(filename) # ,strict=False)
+        n = len(originalPdfFile.pages)
+        fromPage = totPages
+        toPage = n+totPages
 
-        desde = totPages
-        hasta = n+totPages
-        createPagePdf(n,tmp,desde,hasta, username)   # crear pdf Numerado en tmp 
-
-        # abrir archivo temporal y agregar paginas a salida  
-        numberedPdf = PdfFileReader(tmp)
-            
+        # crea pdf temporal en blanco, pero numerado. 
+        createPagePdf(tmpPdfFile,fromPage,toPage, username)
+        numberedPdf = PdfReader(tmpPdfFile)
+        
+        # recorrer las paginas y hacer merge de original y numerada 
         for p in range(n):
-            page = pdf.getPage(p) # pagina original 
-            numberLayer = numberedPdf.getPage(p) # pagina numerada 
-            page.mergePage(numberLayer) # merge de ambas paginas 
+            originalPage = originalPdfFile.pages[p] 
+            numberedPage = numberedPdf.pages[p]
+            originalPage.merge_page(numberedPage) 
+            mergedPdf.add_page(originalPage)
 
-            output1.addPage(page) # agrego a Salida 
-
-        # eliminar archivo temporal 
-        os.remove(tmp)
         totPages = totPages + n 
-
-        # eliminar archivos originales 
+        os.remove(tmpPdfFile)
         os.remove(filename)
 
-    if output1.getNumPages():
-        print('- Salida: ', newFile1)
-        with open(newFile1, 'wb') as o:
-            output1.write(o)
+    if len(mergedPdf.pages):
+        print('- Output: ', newFilename)
+        with open(newFilename, 'wb') as f:
+            mergedPdf.write(f)
 
 
 if __name__ == "__main__":
@@ -101,6 +97,8 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         path = sys.argv[1]
+        if not os.path.isdir(path):
+            print("Carpeta seleccionada no existe.")
         if len(sys.argv) == 3:
             username = sys.argv[2]
 
